@@ -7,8 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"paramstore/internal/ssm"
-
+	"github.com/jimmysawczuk/paramstore/internal/ssm"
 	"github.com/joho/godotenv"
 )
 

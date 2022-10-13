@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"paramstore/internal/ssm"
+	"github.com/jimmysawczuk/paramstore/internal/ssm"
 )
 
 func main() {
