@@ -96,3 +96,25 @@ func LoadIntoEnv(in []Param) error {
 
 	return nil
 }
+
+func DeleteParameters(ctx context.Context, paths []string) error {
+	sess, err := session.NewSession()
+	if err != nil {
+		return fmt.Errorf("session: new session: %w", err)
+	}
+
+	ssmClient := ssm.New(sess)
+
+	res, err := ssmClient.DeleteParametersWithContext(ctx, &ssm.DeleteParametersInput{
+		Names: aws.StringSlice(paths),
+	})
+	if err != nil {
+		return fmt.Errorf("ssm: delete parameters: %w", err)
+	}
+
+	if len(res.InvalidParameters) > 0 {
+		return fmt.Errorf("invalid parameters: %v", aws.StringValueSlice(res.InvalidParameters))
+	}
+
+	return nil
+}
