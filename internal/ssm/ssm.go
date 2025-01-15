@@ -31,6 +31,10 @@ func LoadParametersIntoPath(ctx context.Context, path string, params []Param) er
 			ty = ssm.ParameterTypeSecureString
 		}
 
+		if param.Value == "" {
+			continue
+		}
+
 		_, err := ssmClient.PutParameterWithContext(ctx, &ssm.PutParameterInput{
 			Name:      aws.String(path + "/" + param.Name),
 			Value:     aws.String(param.Value),

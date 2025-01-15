@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jimmysawczuk/paramstore/internal/ssm"
+	"github.com/jimmysawczuk/aws-tools/internal/ssm"
 	"github.com/joho/godotenv"
 )
 
