@@ -13,10 +13,11 @@ jobs:
           - os: ubuntu-latest
             arch: linux-amd64
         cmd:
-          - ssm-load
-          - ssm-delete
-          - ssm-read
+          - cloudfront-invalidate
           - ecs-find-template-taskdef
+          - ssm-delete
+          - ssm-load
+          - ssm-read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
