@@ -49,64 +49,6 @@ func main() {
 	enc.Encode(def)
 }
 
-func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDefinition {
-	def := TaskDefinition{
-		TaskDefinitionARN: aws.StringValue(taskDef.TaskDefinitionArn),
-		ExecutionRoleARN:  aws.StringValue(taskDef.ExecutionRoleArn),
-		TaskRoleARN:       aws.StringValue(taskDef.TaskRoleArn),
-		Compatibilities:   aws.StringValueSlice(taskDef.Compatibilities),
-		NetworkMode:       aws.StringValue(taskDef.NetworkMode),
-		CPU:               aws.StringValue(taskDef.Cpu),
-		Memory:            aws.StringValue(taskDef.Memory),
-		Family:            aws.StringValue(taskDef.Family),
-	}
-
-	for _, c := range taskDef.ContainerDefinitions {
-		cdef := ContainerDefinition{
-			Name:      aws.StringValue(c.Name),
-			Image:     placeholder,
-			Essential: aws.BoolValue(c.Essential),
-		}
-
-		for _, p := range c.PortMappings {
-			cdef.PortMappings = append(cdef.PortMappings, PortMapping{
-				HostPort:      uint64(aws.Int64Value(p.HostPort)),
-				Protocol:      aws.StringValue(p.Protocol),
-				ContainerPort: uint64(aws.Int64Value(p.ContainerPort)),
-			})
-		}
-
-		def.ContainerDefinitions = append(def.ContainerDefinitions, cdef)
-	}
-
-	return def
-}
-
-type TaskDefinition struct {
-	TaskDefinitionARN    string                `json:"taskDefinitionArn"`
-	ExecutionRoleARN     string                `json:"executionRoleArn"`
-	TaskRoleARN          string                `json:"taskRoleArn"`
-	ContainerDefinitions []ContainerDefinition `json:"containerDefinitions"`
-	Compatibilities      []string              `json:"compatibilities"`
-	NetworkMode          string                `json:"networkMode"`
-	CPU                  string                `json:"cpu"`
-	Memory               string                `json:"memory"`
-	Family               string                `json:"family"`
-}
-
-type ContainerDefinition struct {
-	Name         string        `json:"name"`
-	Image        string        `json:"image"`
-	Essential    bool          `json:"essential"`
-	PortMappings []PortMapping `json:"portMappings"`
-}
-
-type PortMapping struct {
-	HostPort      uint64 `json:"hostPort"`
-	Protocol      string `json:"tcp"`
-	ContainerPort uint64 `json:"containerPort"`
-}
-
 func findTaskDefinition(ctx context.Context, ecs *ecssvc.ECS, family, tag, val string) (*ecssvc.TaskDefinition, error) {
 	var token *string = nil
 
@@ -145,4 +87,84 @@ func findTaskDefinition(ctx context.Context, ecs *ecssvc.ECS, family, tag, val s
 	}
 
 	return nil, fmt.Errorf("not found")
+}
+
+func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDefinition {
+	def := TaskDefinition{
+		TaskDefinitionARN: aws.StringValue(taskDef.TaskDefinitionArn),
+		ExecutionRoleARN:  aws.StringValue(taskDef.ExecutionRoleArn),
+		TaskRoleARN:       aws.StringValue(taskDef.TaskRoleArn),
+		Compatibilities:   aws.StringValueSlice(taskDef.Compatibilities),
+		NetworkMode:       aws.StringValue(taskDef.NetworkMode),
+		CPU:               aws.StringValue(taskDef.Cpu),
+		Memory:            aws.StringValue(taskDef.Memory),
+		Family:            aws.StringValue(taskDef.Family),
+	}
+
+	for _, c := range taskDef.ContainerDefinitions {
+		cdef := ContainerDefinition{
+			Name:      aws.StringValue(c.Name),
+			Image:     placeholder,
+			Essential: aws.BoolValue(c.Essential),
+		}
+
+		for _, p := range c.PortMappings {
+			cdef.PortMappings = append(cdef.PortMappings, PortMapping{
+				HostPort:      uint64(aws.Int64Value(p.HostPort)),
+				Protocol:      aws.StringValue(p.Protocol),
+				ContainerPort: uint64(aws.Int64Value(p.ContainerPort)),
+			})
+		}
+
+		for _, e := range c.Environment {
+			cdef.Environment = append(cdef.Environment, Environment{
+				Name:  aws.StringValue(e.Name),
+				Value: aws.StringValue(e.Value),
+			})
+		}
+
+		cdef.LogConfiguration.LogDriver = aws.StringValue(c.LogConfiguration.LogDriver)
+		cdef.LogConfiguration.Options = aws.StringValueMap(c.LogConfiguration.Options)
+
+		def.ContainerDefinitions = append(def.ContainerDefinitions, cdef)
+	}
+
+	return def
+}
+
+type TaskDefinition struct {
+	TaskDefinitionARN    string                `json:"taskDefinitionArn"`
+	ExecutionRoleARN     string                `json:"executionRoleArn"`
+	TaskRoleARN          string                `json:"taskRoleArn"`
+	ContainerDefinitions []ContainerDefinition `json:"containerDefinitions"`
+	Compatibilities      []string              `json:"compatibilities"`
+	NetworkMode          string                `json:"networkMode"`
+	CPU                  string                `json:"cpu"`
+	Memory               string                `json:"memory"`
+	Family               string                `json:"family"`
+}
+
+type ContainerDefinition struct {
+	Name             string           `json:"name"`
+	Image            string           `json:"image"`
+	Essential        bool             `json:"essential"`
+	PortMappings     []PortMapping    `json:"portMappings"`
+	Environment      []Environment    `json:"environment"`
+	LogConfiguration LogConfiguration `json:"logConfiguration"`
+}
+
+type PortMapping struct {
+	HostPort      uint64 `json:"hostPort"`
+	Protocol      string `json:"tcp"`
+	ContainerPort uint64 `json:"containerPort"`
+}
+
+type Environment struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type LogConfiguration struct {
+	LogDriver string            `json:"logDriver"`
+	Options   map[string]string `json:"options"`
 }
