@@ -51,13 +51,14 @@ func main() {
 
 func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDefinition {
 	def := TaskDefinition{
-		ExecutionRoleARN: aws.StringValue(taskDef.ExecutionRoleArn),
-		TaskRoleARN:      aws.StringValue(taskDef.TaskRoleArn),
-		Compatibilities:  aws.StringValueSlice(taskDef.Compatibilities),
-		NetworkMode:      aws.StringValue(taskDef.NetworkMode),
-		CPU:              aws.StringValue(taskDef.Cpu),
-		Memory:           aws.StringValue(taskDef.Memory),
-		Family:           aws.StringValue(taskDef.Family),
+		TaskDefinitionARN: aws.StringValue(taskDef.TaskDefinitionArn),
+		ExecutionRoleARN:  aws.StringValue(taskDef.ExecutionRoleArn),
+		TaskRoleARN:       aws.StringValue(taskDef.TaskRoleArn),
+		Compatibilities:   aws.StringValueSlice(taskDef.Compatibilities),
+		NetworkMode:       aws.StringValue(taskDef.NetworkMode),
+		CPU:               aws.StringValue(taskDef.Cpu),
+		Memory:            aws.StringValue(taskDef.Memory),
+		Family:            aws.StringValue(taskDef.Family),
 	}
 
 	for _, c := range taskDef.ContainerDefinitions {
@@ -82,6 +83,7 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 }
 
 type TaskDefinition struct {
+	TaskDefinitionARN    string                `json:"taskDefinitionArn"`
 	ExecutionRoleARN     string                `json:"executionRoleArn"`
 	TaskRoleARN          string                `json:"taskRoleArn"`
 	ContainerDefinitions []ContainerDefinition `json:"containerDefinitions"`
