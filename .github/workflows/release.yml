@@ -14,6 +14,7 @@ jobs:
             arch: linux-amd64
         cmd:
           - cloudfront-invalidate
+          - ecs-build-appspec
           - ecs-find-template-taskdef
           - ssm-delete
           - ssm-load
