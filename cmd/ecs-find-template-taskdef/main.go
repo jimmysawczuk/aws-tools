@@ -99,6 +99,7 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 		CPU:               aws.StringValue(taskDef.Cpu),
 		Memory:            aws.StringValue(taskDef.Memory),
 		Family:            aws.StringValue(taskDef.Family),
+		PidMode:           aws.StringValue(taskDef.PidMode),
 	}
 
 	for _, c := range taskDef.ContainerDefinitions {
@@ -142,6 +143,7 @@ type TaskDefinition struct {
 	CPU                  string                `json:"cpu"`
 	Memory               string                `json:"memory"`
 	Family               string                `json:"family"`
+	PidMode              string                `json:"pidMode,omitempty"`
 }
 
 type ContainerDefinition struct {
