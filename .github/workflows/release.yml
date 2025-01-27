@@ -16,6 +16,7 @@ jobs:
           - cloudfront-invalidate
           - ecs-build-appspec
           - ecs-find-template-taskdef
+          - retrieve-secret
           - ssm-delete
           - ssm-load
           - ssm-read
