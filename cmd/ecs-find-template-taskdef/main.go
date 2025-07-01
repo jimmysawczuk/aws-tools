@@ -134,6 +134,11 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 			cdef.LogConfiguration.Options = aws.StringValueMap(c.LogConfiguration.Options)
 		}
 
+		if c.FirelensConfiguration != nil {
+			cdef.FirelensConfiguration.Type = aws.StringValue(c.FirelensConfiguration.Type)
+			cdef.FirelensConfiguration.Options = aws.StringValueMap(c.FirelensConfiguration.Options)
+		}
+
 		def.ContainerDefinitions = append(def.ContainerDefinitions, cdef)
 	}
 
@@ -154,12 +159,13 @@ type TaskDefinition struct {
 }
 
 type ContainerDefinition struct {
-	Name             string           `json:"name"`
-	Image            string           `json:"image"`
-	Essential        bool             `json:"essential"`
-	PortMappings     []PortMapping    `json:"portMappings"`
-	Environment      []Environment    `json:"environment"`
-	LogConfiguration LogConfiguration `json:"logConfiguration,omitzero"`
+	Name                  string                `json:"name"`
+	Image                 string                `json:"image"`
+	Essential             bool                  `json:"essential"`
+	PortMappings          []PortMapping         `json:"portMappings"`
+	Environment           []Environment         `json:"environment"`
+	LogConfiguration      LogConfiguration      `json:"logConfiguration,omitzero"`
+	FirelensConfiguration FirelensConfiguration `json:"firelensConfiguration,omitzero"`
 }
 
 type PortMapping struct {
@@ -176,4 +182,9 @@ type Environment struct {
 type LogConfiguration struct {
 	LogDriver string            `json:"logDriver"`
 	Options   map[string]string `json:"options"`
+}
+
+type FirelensConfiguration struct {
+	Type    string            `json:"type"`
+	Options map[string]string `json:"options"`
 }
