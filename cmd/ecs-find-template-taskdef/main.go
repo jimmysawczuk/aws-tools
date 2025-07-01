@@ -102,11 +102,16 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 		PidMode:           aws.StringValue(taskDef.PidMode),
 	}
 
-	for _, c := range taskDef.ContainerDefinitions {
+	for i, c := range taskDef.ContainerDefinitions {
 		cdef := ContainerDefinition{
 			Name:      aws.StringValue(c.Name),
-			Image:     placeholder,
 			Essential: aws.BoolValue(c.Essential),
+		}
+
+		if i == 0 {
+			cdef.Image = placeholder
+		} else {
+			cdef.Image = aws.StringValue(c.Image)
 		}
 
 		for _, p := range c.PortMappings {
@@ -124,8 +129,10 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 			})
 		}
 
-		cdef.LogConfiguration.LogDriver = aws.StringValue(c.LogConfiguration.LogDriver)
-		cdef.LogConfiguration.Options = aws.StringValueMap(c.LogConfiguration.Options)
+		if c.LogConfiguration != nil {
+			cdef.LogConfiguration.LogDriver = aws.StringValue(c.LogConfiguration.LogDriver)
+			cdef.LogConfiguration.Options = aws.StringValueMap(c.LogConfiguration.Options)
+		}
 
 		def.ContainerDefinitions = append(def.ContainerDefinitions, cdef)
 	}
@@ -152,7 +159,7 @@ type ContainerDefinition struct {
 	Essential        bool             `json:"essential"`
 	PortMappings     []PortMapping    `json:"portMappings"`
 	Environment      []Environment    `json:"environment"`
-	LogConfiguration LogConfiguration `json:"logConfiguration"`
+	LogConfiguration LogConfiguration `json:"logConfiguration,omitzero"`
 }
 
 type PortMapping struct {
