@@ -104,14 +104,16 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 
 	for i, c := range taskDef.ContainerDefinitions {
 		cdef := ContainerDefinition{
-			Name:      aws.StringValue(c.Name),
-			Essential: aws.BoolValue(c.Essential),
+			Name:              aws.StringValue(c.Name),
+			Image:             aws.StringValue(c.Image),
+			Essential:         aws.BoolValue(c.Essential),
+			CPU:               uint64(aws.Int64Value(c.Cpu)),
+			Memory:            uint64(aws.Int64Value(c.Memory)),
+			MemoryReservation: uint64(aws.Int64Value(c.MemoryReservation)),
 		}
 
 		if i == 0 {
 			cdef.Image = placeholder
-		} else {
-			cdef.Image = aws.StringValue(c.Image)
 		}
 
 		for _, p := range c.PortMappings {
@@ -162,6 +164,9 @@ type ContainerDefinition struct {
 	Name                  string                `json:"name"`
 	Image                 string                `json:"image"`
 	Essential             bool                  `json:"essential"`
+	CPU                   uint64                `json:"cpu,omitzero"`
+	Memory                uint64                `json:"memory,omitzero"`
+	MemoryReservation     uint64                `json:"memoryReservation,omitzero"`
 	PortMappings          []PortMapping         `json:"portMappings"`
 	Environment           []Environment         `json:"environment"`
 	LogConfiguration      LogConfiguration      `json:"logConfiguration,omitzero"`
