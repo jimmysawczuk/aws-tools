@@ -3,7 +3,7 @@ module github.com/jimmysawczuk/aws-tools
 go 1.23
 
 require (
-	github.com/aws/aws-sdk-go v1.44.115
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
 )
