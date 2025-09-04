@@ -9,9 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	ssmsvc "github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
 func main() {
@@ -21,14 +21,17 @@ func main() {
 	flag.Parse()
 	secretName := flag.Arg(0)
 
-	sess, err := session.NewSession()
+	ctx := context.Background()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatal(fmt.Errorf("session: new session: %w", err))
+		log.Fatalf("unable to load AWS config: %v", err)
 	}
 
-	ssm := ssmsvc.New(sess)
+	// Create Secrets Manager client
+	sm := secretsmanager.NewFromConfig(cfg)
 
-	rd, err := getSecret(context.Background(), ssm, secretName)
+	rd, err := getSecret(ctx, sm, secretName)
 	if err != nil {
 		log.Fatalf("couldn't get secret: %s", err)
 	}
@@ -48,13 +51,13 @@ func main() {
 	}
 }
 
-func getSecret(ctx context.Context, ssm *ssmsvc.SecretsManager, name string) (io.Reader, error) {
-	resp, err := ssm.GetSecretValueWithContext(ctx, &ssmsvc.GetSecretValueInput{
+func getSecret(ctx context.Context, sm *secretsmanager.Client, name string) (io.Reader, error) {
+	resp, err := sm.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(name),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("secrets manager: %w", err)
 	}
 
-	return strings.NewReader(aws.StringValue(resp.SecretString)), nil
+	return strings.NewReader(aws.ToString(resp.SecretString)), nil
 }
