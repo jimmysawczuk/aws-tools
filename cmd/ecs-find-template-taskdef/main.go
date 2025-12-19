@@ -9,9 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	ecssvc "github.com/aws/aws-sdk-go-v2/service/ecs"
+	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
 func main() {
@@ -29,12 +30,14 @@ func main() {
 		log.Fatal(fmt.Errorf("expected tag should be of format tag=value"))
 	}
 
-	sess, err := session.NewSession()
+	ctx := context.Background()
+
+	awscfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatal(fmt.Errorf("session: new session: %w", err))
+		log.Fatalf("unable to load AWS config: %v", err)
 	}
 
-	ecs := ecssvc.New(sess)
+	ecs := ecssvc.NewFromConfig(awscfg)
 
 	taskDef, err := findTaskDefinition(context.Background(), ecs, family, tag, val)
 	if err != nil {
@@ -49,14 +52,14 @@ func main() {
 	enc.Encode(def)
 }
 
-func findTaskDefinition(ctx context.Context, ecs *ecssvc.ECS, family, tag, val string) (*ecssvc.TaskDefinition, error) {
+func findTaskDefinition(ctx context.Context, ecs *ecssvc.Client, family, tag, val string) (*ecstypes.TaskDefinition, error) {
 	var token *string = nil
 
 	for {
-		res, err := ecs.ListTaskDefinitionsWithContext(ctx, &ecssvc.ListTaskDefinitionsInput{
+		res, err := ecs.ListTaskDefinitions(ctx, &ecssvc.ListTaskDefinitionsInput{
 			FamilyPrefix: aws.String(family),
-			Sort:         aws.String(ecssvc.SortOrderDesc),
-			Status:       aws.String(ecssvc.TaskDefinitionStatusActive),
+			Sort:         ecstypes.SortOrderDesc,
+			Status:       ecstypes.TaskDefinitionStatusActive,
 			NextToken:    token,
 		})
 		if err != nil {
@@ -64,16 +67,16 @@ func findTaskDefinition(ctx context.Context, ecs *ecssvc.ECS, family, tag, val s
 		}
 
 		for _, arn := range res.TaskDefinitionArns {
-			res, err := ecs.DescribeTaskDefinitionWithContext(context.Background(), &ecssvc.DescribeTaskDefinitionInput{
-				Include:        aws.StringSlice([]string{ecssvc.TaskDefinitionFieldTags}),
-				TaskDefinition: arn,
+			res, err := ecs.DescribeTaskDefinition(ctx, &ecssvc.DescribeTaskDefinitionInput{
+				Include:        []ecstypes.TaskDefinitionField{ecstypes.TaskDefinitionFieldTags},
+				TaskDefinition: aws.String(arn),
 			})
 			if err != nil {
-				log.Fatal(fmt.Errorf("ecs: describe task definition (%s): %w", aws.StringValue(arn), err))
+				log.Fatal(fmt.Errorf("ecs: describe task definition (%s): %w", arn, err))
 			}
 
 			for _, t := range res.Tags {
-				if aws.StringValue(t.Key) == tag && aws.StringValue(t.Value) == val {
+				if aws.ToString(t.Key) == tag && aws.ToString(t.Value) == val {
 					return res.TaskDefinition, nil
 				}
 			}
@@ -89,27 +92,27 @@ func findTaskDefinition(ctx context.Context, ecs *ecssvc.ECS, family, tag, val s
 	return nil, fmt.Errorf("not found")
 }
 
-func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDefinition {
+func buildDefinition(taskDef *ecstypes.TaskDefinition, placeholder string) TaskDefinition {
 	def := TaskDefinition{
-		TaskDefinitionARN: aws.StringValue(taskDef.TaskDefinitionArn),
-		ExecutionRoleARN:  aws.StringValue(taskDef.ExecutionRoleArn),
-		TaskRoleARN:       aws.StringValue(taskDef.TaskRoleArn),
-		Compatibilities:   aws.StringValueSlice(taskDef.Compatibilities),
-		NetworkMode:       aws.StringValue(taskDef.NetworkMode),
-		CPU:               aws.StringValue(taskDef.Cpu),
-		Memory:            aws.StringValue(taskDef.Memory),
-		Family:            aws.StringValue(taskDef.Family),
-		PidMode:           aws.StringValue(taskDef.PidMode),
+		TaskDefinitionARN: aws.ToString(taskDef.TaskDefinitionArn),
+		ExecutionRoleARN:  aws.ToString(taskDef.ExecutionRoleArn),
+		TaskRoleARN:       aws.ToString(taskDef.TaskRoleArn),
+		Compatibilities:   taskDef.Compatibilities,
+		NetworkMode:       string(taskDef.NetworkMode),
+		CPU:               aws.ToString(taskDef.Cpu),
+		Memory:            aws.ToString(taskDef.Memory),
+		Family:            aws.ToString(taskDef.Family),
+		PidMode:           string(taskDef.PidMode),
 	}
 
 	for i, c := range taskDef.ContainerDefinitions {
 		cdef := ContainerDefinition{
-			Name:              aws.StringValue(c.Name),
-			Image:             aws.StringValue(c.Image),
-			Essential:         aws.BoolValue(c.Essential),
-			CPU:               uint64(aws.Int64Value(c.Cpu)),
-			Memory:            uint64(aws.Int64Value(c.Memory)),
-			MemoryReservation: uint64(aws.Int64Value(c.MemoryReservation)),
+			Name:              aws.ToString(c.Name),
+			Image:             aws.ToString(c.Image),
+			Essential:         aws.ToBool(c.Essential),
+			CPU:               uint64(c.Cpu),
+			Memory:            uint64(aws.ToInt32(c.Memory)),
+			MemoryReservation: uint64(aws.ToInt32(c.MemoryReservation)),
 		}
 
 		if i == 0 {
@@ -118,27 +121,27 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 
 		for _, p := range c.PortMappings {
 			cdef.PortMappings = append(cdef.PortMappings, PortMapping{
-				HostPort:      uint64(aws.Int64Value(p.HostPort)),
-				Protocol:      aws.StringValue(p.Protocol),
-				ContainerPort: uint64(aws.Int64Value(p.ContainerPort)),
+				HostPort:      uint64(aws.ToInt32(p.HostPort)),
+				Protocol:      string(p.Protocol),
+				ContainerPort: uint64(aws.ToInt32(p.ContainerPort)),
 			})
 		}
 
 		for _, e := range c.Environment {
 			cdef.Environment = append(cdef.Environment, Environment{
-				Name:  aws.StringValue(e.Name),
-				Value: aws.StringValue(e.Value),
+				Name:  aws.ToString(e.Name),
+				Value: aws.ToString(e.Value),
 			})
 		}
 
 		if c.LogConfiguration != nil {
-			cdef.LogConfiguration.LogDriver = aws.StringValue(c.LogConfiguration.LogDriver)
-			cdef.LogConfiguration.Options = aws.StringValueMap(c.LogConfiguration.Options)
+			cdef.LogConfiguration.LogDriver = string(c.LogConfiguration.LogDriver)
+			cdef.LogConfiguration.Options = c.LogConfiguration.Options
 		}
 
 		if c.FirelensConfiguration != nil {
-			cdef.FirelensConfiguration.Type = aws.StringValue(c.FirelensConfiguration.Type)
-			cdef.FirelensConfiguration.Options = aws.StringValueMap(c.FirelensConfiguration.Options)
+			cdef.FirelensConfiguration.Type = string(c.FirelensConfiguration.Type)
+			cdef.FirelensConfiguration.Options = c.FirelensConfiguration.Options
 		}
 
 		def.ContainerDefinitions = append(def.ContainerDefinitions, cdef)
@@ -148,16 +151,16 @@ func buildDefinition(taskDef *ecssvc.TaskDefinition, placeholder string) TaskDef
 }
 
 type TaskDefinition struct {
-	TaskDefinitionARN    string                `json:"taskDefinitionArn"`
-	ExecutionRoleARN     string                `json:"executionRoleArn"`
-	TaskRoleARN          string                `json:"taskRoleArn"`
-	ContainerDefinitions []ContainerDefinition `json:"containerDefinitions"`
-	Compatibilities      []string              `json:"compatibilities"`
-	NetworkMode          string                `json:"networkMode"`
-	CPU                  string                `json:"cpu"`
-	Memory               string                `json:"memory"`
-	Family               string                `json:"family"`
-	PidMode              string                `json:"pidMode,omitempty"`
+	TaskDefinitionARN    string                   `json:"taskDefinitionArn"`
+	ExecutionRoleARN     string                   `json:"executionRoleArn"`
+	TaskRoleARN          string                   `json:"taskRoleArn"`
+	ContainerDefinitions []ContainerDefinition    `json:"containerDefinitions"`
+	Compatibilities      []ecstypes.Compatibility `json:"compatibilities"`
+	NetworkMode          string                   `json:"networkMode"`
+	CPU                  string                   `json:"cpu"`
+	Memory               string                   `json:"memory"`
+	Family               string                   `json:"family"`
+	PidMode              string                   `json:"pidMode,omitempty"`
 }
 
 type ContainerDefinition struct {
