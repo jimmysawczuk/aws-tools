@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.41.0
 	github.com/aws/aws-sdk-go-v2/config v1.31.6
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.58.3
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.70.0
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.39.2
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0

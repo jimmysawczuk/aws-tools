@@ -98,6 +98,13 @@ github.com/aws/aws-sdk-go-v2/internal/ini
 github.com/aws/aws-sdk-go-v2/service/cloudfront
 github.com/aws/aws-sdk-go-v2/service/cloudfront/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/cloudfront/types
+# github.com/aws/aws-sdk-go-v2/service/ecs v1.70.0
+## explicit; go 1.23
+github.com/aws/aws-sdk-go-v2/service/ecs
+github.com/aws/aws-sdk-go-v2/service/ecs/document
+github.com/aws/aws-sdk-go-v2/service/ecs/internal/document
+github.com/aws/aws-sdk-go-v2/service/ecs/internal/endpoints
+github.com/aws/aws-sdk-go-v2/service/ecs/types
 # github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.1
 ## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding
@@ -131,6 +138,8 @@ github.com/aws/smithy-go/auth
 github.com/aws/smithy-go/auth/bearer
 github.com/aws/smithy-go/context
 github.com/aws/smithy-go/document
+github.com/aws/smithy-go/document/internal/serde
+github.com/aws/smithy-go/document/json
 github.com/aws/smithy-go/encoding
 github.com/aws/smithy-go/encoding/httpbinding
 github.com/aws/smithy-go/encoding/json
