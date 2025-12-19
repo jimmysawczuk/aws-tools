@@ -8,23 +8,25 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	cloudfrontsvc "github.com/aws/aws-sdk-go/service/cloudfront"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	cloudfrontsvc "github.com/aws/aws-sdk-go-v2/service/cloudfront"
+	cloudfronttypes "github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 )
 
-var (
-	sess       *session.Session
-	cloudfront *cloudfrontsvc.CloudFront
-)
+var cloudfront *cloudfrontsvc.Client
 
 func main() {
 	flag.Parse()
 
-	sess = session.Must(session.NewSession())
-	cloudfront = cloudfrontsvc.New(sess)
 	ctx := context.Background()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Fatalf("unable to load AWS config: %v", err)
+	}
+
+	cloudfront = cloudfrontsvc.NewFromConfig(cfg)
 
 	dist, path, err := parseArgs(ctx, flag.Args())
 	if err != nil {
@@ -45,7 +47,7 @@ func main() {
 	log.Printf("invalidation created: %s", invalidation)
 
 	for {
-		resp, err := cloudfront.GetInvalidationWithContext(ctx, &cloudfrontsvc.GetInvalidationInput{
+		resp, err := cloudfront.GetInvalidation(ctx, &cloudfrontsvc.GetInvalidationInput{
 			DistributionId: aws.String(dist.ID),
 			Id:             aws.String(invalidation),
 		})
@@ -54,7 +56,7 @@ func main() {
 			time.Sleep(5 * time.Second)
 		}
 
-		if aws.StringValue(resp.Invalidation.Status) == "Completed" {
+		if aws.ToString(resp.Invalidation.Status) == "Completed" {
 			log.Println("invalidation complete")
 			break
 		}
@@ -72,7 +74,7 @@ type Distribution struct {
 }
 
 func getDistribution(ctx context.Context, id string) (*Distribution, error) {
-	resp, err := cloudfront.GetDistributionWithContext(ctx, &cloudfrontsvc.GetDistributionInput{
+	resp, err := cloudfront.GetDistribution(ctx, &cloudfrontsvc.GetDistributionInput{
 		Id: aws.String(id),
 	})
 	if err != nil {
@@ -80,26 +82,24 @@ func getDistribution(ctx context.Context, id string) (*Distribution, error) {
 	}
 
 	dist := Distribution{
-		ID:      aws.StringValue(resp.Distribution.Id),
-		ARN:     aws.StringValue(resp.Distribution.ARN),
-		Comment: aws.StringValue(resp.Distribution.DistributionConfig.Comment),
+		ID:      aws.ToString(resp.Distribution.Id),
+		ARN:     aws.ToString(resp.Distribution.ARN),
+		Comment: aws.ToString(resp.Distribution.DistributionConfig.Comment),
 	}
 
-	for _, s := range resp.Distribution.DistributionConfig.Aliases.Items {
-		dist.Aliases = append(dist.Aliases, aws.StringValue(s))
-	}
+	dist.Aliases = append(dist.Aliases, resp.Distribution.DistributionConfig.Aliases.Items...)
 
 	return &dist, nil
 }
 
 func invalidateDistribution(ctx context.Context, id string, path string) (string, error) {
-	resp, err := cloudfront.CreateInvalidationWithContext(ctx, &cloudfrontsvc.CreateInvalidationInput{
+	resp, err := cloudfront.CreateInvalidation(ctx, &cloudfrontsvc.CreateInvalidationInput{
 		DistributionId: aws.String(id),
-		InvalidationBatch: &cloudfrontsvc.InvalidationBatch{
+		InvalidationBatch: &cloudfronttypes.InvalidationBatch{
 			CallerReference: aws.String(time.Now().Format("20060102150405")),
-			Paths: &cloudfrontsvc.Paths{
-				Items:    aws.StringSlice([]string{path}),
-				Quantity: aws.Int64(1),
+			Paths: &cloudfronttypes.Paths{
+				Items:    []string{path},
+				Quantity: aws.Int32(1),
 			},
 		},
 	})
@@ -107,7 +107,7 @@ func invalidateDistribution(ctx context.Context, id string, path string) (string
 		return "", fmt.Errorf("aws: cloudfront: create invalidation: %w", err)
 	}
 
-	return aws.StringValue(resp.Invalidation.Id), nil
+	return aws.ToString(resp.Invalidation.Id), nil
 }
 
 func parseArgs(ctx context.Context, args []string) (*Distribution, string, error) {
@@ -126,8 +126,7 @@ func parseArgs(ctx context.Context, args []string) (*Distribution, string, error
 		return dist, path, nil
 	}
 
-	var aerr awserr.Error
-	if errors.As(err, &aerr) && aerr.Code() != cloudfrontsvc.ErrCodeNoSuchDistribution {
+	if nsd := new(cloudfronttypes.NoSuchDistribution); !errors.As(err, &nsd) {
 		return nil, "", fmt.Errorf("get distribution: %w", err)
 	}
 
@@ -145,15 +144,15 @@ func parseArgs(ctx context.Context, args []string) (*Distribution, string, error
 }
 
 func findDistribution(ctx context.Context, domain string) (string, error) {
-	dists, err := cloudfront.ListDistributionsWithContext(ctx, &cloudfrontsvc.ListDistributionsInput{})
+	dists, err := cloudfront.ListDistributions(ctx, &cloudfrontsvc.ListDistributionsInput{})
 	if err != nil {
 		return "", fmt.Errorf("list distributions: %w", err)
 	}
 
 	for _, d := range dists.DistributionList.Items {
 		for _, a := range d.Aliases.Items {
-			if aws.StringValue(a) == domain {
-				return aws.StringValue(d.Id), nil
+			if a == domain {
+				return aws.ToString(d.Id), nil
 			}
 		}
 	}
