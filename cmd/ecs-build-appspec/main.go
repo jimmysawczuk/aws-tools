@@ -7,9 +7,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	ecssvc "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	ecssvc "github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -26,12 +26,14 @@ func main() {
 		log.Fatal(fmt.Errorf("couldn't process env: %w", err))
 	}
 
-	sess, err := session.NewSession()
+	ctx := context.Background()
+
+	awscfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatal(fmt.Errorf("session: new session: %w", err))
+		log.Fatalf("unable to load AWS config: %v", err)
 	}
 
-	ecs := ecssvc.New(sess)
+	ecs := ecssvc.NewFromConfig(awscfg)
 
 	spec, err := buildAppspec(context.Background(), ecs, cfg.ClusterName, cfg.ServiceName)
 	if err != nil {
@@ -46,10 +48,10 @@ func main() {
 	}
 }
 
-func buildAppspec(ctx context.Context, ecs *ecssvc.ECS, cluster string, service string) (*Appspec, error) {
-	res, err := ecs.DescribeServicesWithContext(ctx, &ecssvc.DescribeServicesInput{
+func buildAppspec(ctx context.Context, ecs *ecssvc.Client, cluster string, service string) (*Appspec, error) {
+	res, err := ecs.DescribeServices(ctx, &ecssvc.DescribeServicesInput{
 		Cluster:  aws.String(cluster),
-		Services: aws.StringSlice([]string{service}),
+		Services: []string{service},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("ecs: describe services: %w (cluster: %s, service: %s)", err, cluster, service)
@@ -74,9 +76,9 @@ func buildAppspec(ctx context.Context, ecs *ecssvc.ECS, cluster string, service 
 
 	for _, s := range svc.CapacityProviderStrategy {
 		resource.Properties.CapacityProviderStrategy = append(resource.Properties.CapacityProviderStrategy, CapacityProviderStrategy{
-			Base:             uint(aws.Int64Value(s.Base)),
-			CapacityProvider: aws.StringValue(s.CapacityProvider),
-			Weight:           uint(aws.Int64Value(s.Weight)),
+			Base:             uint(s.Base),
+			CapacityProvider: aws.ToString(s.CapacityProvider),
+			Weight:           uint(s.Weight),
 		})
 	}
 

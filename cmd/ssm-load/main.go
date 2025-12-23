@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	ssmsvc "github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/jimmysawczuk/aws-tools/internal/ssm"
 	"github.com/joho/godotenv"
 )
@@ -25,6 +27,15 @@ func main() {
 	}
 
 	envPath := flag.Arg(0)
+
+	ctx := context.Background()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Fatalf("unable to load AWS config: %v", err)
+	}
+
+	ssmClient := ssmsvc.NewFromConfig(cfg)
 
 	fp, err := os.Open(envPath)
 	if err != nil {
@@ -48,7 +59,7 @@ func main() {
 	}
 
 	if !dryRun {
-		if err := ssm.LoadParametersIntoPath(context.Background(), path, params); err != nil {
+		if err := ssm.LoadParametersIntoPath(context.Background(), ssmClient, path, params); err != nil {
 			log.Fatal("ssm: load parameters into path", err)
 		}
 		return
