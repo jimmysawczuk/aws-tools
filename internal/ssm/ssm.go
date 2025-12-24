@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
 type Param struct {
@@ -17,28 +17,21 @@ type Param struct {
 	Secure bool
 }
 
-func LoadParametersIntoPath(ctx context.Context, path string, params []Param) error {
-	sess, err := session.NewSession()
-	if err != nil {
-		return fmt.Errorf("session: new session: %w", err)
-	}
-
-	ssmClient := ssm.New(sess)
-
+func LoadParametersIntoPath(ctx context.Context, cl *ssm.Client, path string, params []Param) error {
 	for _, param := range params {
-		ty := ssm.ParameterTypeString
+		ty := types.ParameterTypeString
 		if param.Secure {
-			ty = ssm.ParameterTypeSecureString
+			ty = types.ParameterTypeSecureString
 		}
 
 		if param.Value == "" {
 			continue
 		}
 
-		_, err := ssmClient.PutParameterWithContext(ctx, &ssm.PutParameterInput{
+		_, err := cl.PutParameter(ctx, &ssm.PutParameterInput{
 			Name:      aws.String(path + "/" + param.Name),
 			Value:     aws.String(param.Value),
-			Type:      aws.String(ty),
+			Type:      ty,
 			Overwrite: aws.Bool(true),
 		})
 		if err != nil {
@@ -49,20 +42,13 @@ func LoadParametersIntoPath(ctx context.Context, path string, params []Param) er
 	return nil
 }
 
-func GetParametersFromPath(ctx context.Context, path string) ([]Param, error) {
-	sess, err := session.NewSession()
-	if err != nil {
-		return nil, fmt.Errorf("session: new session: %w", err)
-	}
-
-	ssmClient := ssm.New(sess)
-
+func GetParametersFromPath(ctx context.Context, ssmClient *ssm.Client, path string) ([]Param, error) {
 	var tok *string
-	var params []*ssm.Parameter
+	var params []types.Parameter
 
 	for {
 
-		res, err := ssmClient.GetParametersByPathWithContext(ctx, &ssm.GetParametersByPathInput{
+		res, err := ssmClient.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
 			NextToken:      tok,
 			Path:           aws.String(path),
 			WithDecryption: aws.Bool(true),
@@ -83,8 +69,8 @@ func GetParametersFromPath(ctx context.Context, path string) ([]Param, error) {
 	tbr := make([]Param, len(params))
 	for i, p := range params {
 		tbr[i] = Param{
-			Name:  strings.TrimLeft(strings.Replace(aws.StringValue(p.Name), path, "", 1), "/"),
-			Value: aws.StringValue(p.Value),
+			Name:  strings.TrimLeft(strings.Replace(aws.ToString(p.Name), path, "", 1), "/"),
+			Value: aws.ToString(p.Value),
 		}
 	}
 
@@ -101,23 +87,16 @@ func LoadIntoEnv(in []Param) error {
 	return nil
 }
 
-func DeleteParameters(ctx context.Context, paths []string) error {
-	sess, err := session.NewSession()
-	if err != nil {
-		return fmt.Errorf("session: new session: %w", err)
-	}
-
-	ssmClient := ssm.New(sess)
-
-	res, err := ssmClient.DeleteParametersWithContext(ctx, &ssm.DeleteParametersInput{
-		Names: aws.StringSlice(paths),
+func DeleteParameters(ctx context.Context, ssmClient *ssm.Client, paths []string) error {
+	res, err := ssmClient.DeleteParameters(ctx, &ssm.DeleteParametersInput{
+		Names: paths,
 	})
 	if err != nil {
 		return fmt.Errorf("ssm: delete parameters: %w", err)
 	}
 
 	if len(res.InvalidParameters) > 0 {
-		return fmt.Errorf("invalid parameters: %v", aws.StringValueSlice(res.InvalidParameters))
+		return fmt.Errorf("invalid parameters: %v", res.InvalidParameters)
 	}
 
 	return nil

@@ -28,7 +28,6 @@ func main() {
 		log.Fatalf("unable to load AWS config: %v", err)
 	}
 
-	// Create Secrets Manager client
 	sm := secretsmanager.NewFromConfig(cfg)
 
 	rd, err := getSecret(ctx, sm, secretName)

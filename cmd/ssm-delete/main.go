@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	ssmsvc "github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/jimmysawczuk/aws-tools/internal/ssm"
 )
 
@@ -22,7 +24,16 @@ func main() {
 		log.Fatal("path must be present and start with /")
 	}
 
-	params, err := ssm.GetParametersFromPath(context.Background(), path)
+	ctx := context.Background()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Fatalf("unable to load AWS config: %v", err)
+	}
+
+	ssmClient := ssmsvc.NewFromConfig(cfg)
+
+	params, err := ssm.GetParametersFromPath(context.Background(), ssmClient, path)
 	if err != nil {
 		log.Fatal("ssm: get parameters from path", err)
 	}
@@ -44,7 +55,7 @@ func main() {
 
 		// log.Println(names("", sl))
 
-		if err := ssm.DeleteParameters(context.Background(), names(path+"/", sl)); err != nil {
+		if err := ssm.DeleteParameters(context.Background(), ssmClient, names(path+"/", sl)); err != nil {
 			panic(err)
 		}
 	}
