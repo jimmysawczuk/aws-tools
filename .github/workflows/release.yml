@@ -31,14 +31,9 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
-      - name: Get tag
-        id: tag
-        uses: jimmysawczuk/actions/github/get-tag-from-ref@main
-        with:
-          ref: ${{ github.ref }}
       - name: Build
         env:
-          TAG: ${{ steps.tag.outputs.tag }}
+          TAG: ${{ github.ref_name }}
           GO_VERSION: ${{ matrix.go }}
         run: |
           buildtags="-X main.version=$TAG -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)"
