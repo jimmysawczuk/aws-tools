@@ -82,20 +82,20 @@ ssm-read -path /myapp/prod -out .env
 
 ### ssm-load
 
-Writes a dotenv file into Parameter Store as `SecureString` parameters under a path, overwriting existing values. Empty values are skipped. Dry run by default.
+Writes a dotenv file into Parameter Store as `SecureString` parameters under a path, overwriting existing values. Empty values are skipped. Previews only unless `-apply` is passed.
 
 ```sh
-ssm-load -path /myapp/prod .env                 # preview
-ssm-load -path /myapp/prod -dry-run=false .env  # write
+ssm-load -path /myapp/prod .env         # preview
+ssm-load -path /myapp/prod -apply .env  # write
 ```
 
 ### ssm-delete
 
-Deletes all parameters under a path. Dry run by default (lists what would be deleted).
+Deletes all parameters under a path. Lists what would be deleted unless `-apply` is passed.
 
 ```sh
 ssm-delete -path /myapp/old
-ssm-delete -path /myapp/old -dry-run=false
+ssm-delete -path /myapp/old -apply
 ```
 
 ### ssm-exec

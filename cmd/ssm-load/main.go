@@ -15,10 +15,10 @@ import (
 
 func main() {
 	var path string
-	var dryRun bool
+	var apply bool
 
 	flag.StringVar(&path, "path", "", "path prefix for ssm")
-	flag.BoolVar(&dryRun, "dry-run", true, "set to false to actually write to parameter store")
+	flag.BoolVar(&apply, "apply", false, "actually write to parameter store (otherwise only preview)")
 
 	flag.Parse()
 
@@ -58,7 +58,7 @@ func main() {
 		})
 	}
 
-	if !dryRun {
+	if apply {
 		if err := ssm.LoadParametersIntoPath(context.Background(), ssmClient, path, params); err != nil {
 			log.Fatal("ssm: load parameters into path", err)
 		}

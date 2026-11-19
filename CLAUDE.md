@@ -23,7 +23,7 @@ There are no tests that hit AWS; don't add any. Tests, if added, must run offlin
 - Go 1.25 minimum (`go.mod`); CI tests and release builds both use the last three Go majors (1.25, 1.26, 1.27); keep the matrices in `test.yml` and `release.yml` in sync.
 - Config via stdlib `flag` or `envconfig` env vars; AWS config via `config.LoadDefaultConfig`.
 - Errors wrapped with `fmt.Errorf("svc: op: %w", err)`; fatal via `log.Fatal*` in `main`.
-- Destructive tools default to dry run (`-dry-run=true`) where possible.
+- Destructive tools only preview by default and act when `-apply` is passed. Don't add `-dry-run` flags.
 - Dependencies are limited to the AWS SDK, `godotenv`, and `envconfig`. Don't add more without a strong reason.
 
 ## Adding a tool

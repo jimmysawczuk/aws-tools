@@ -13,10 +13,10 @@ import (
 
 func main() {
 	var path string
-	var dryRun bool
+	var apply bool
 
 	flag.StringVar(&path, "path", "", "path prefix for ssm")
-	flag.BoolVar(&dryRun, "dry-run", true, "set to false to actually delete params")
+	flag.BoolVar(&apply, "apply", false, "actually delete params (otherwise only list them)")
 
 	flag.Parse()
 
@@ -43,7 +43,7 @@ func main() {
 		log.Println(v.Name, v.Secure)
 	}
 
-	if dryRun {
+	if !apply {
 		return
 	}
 
