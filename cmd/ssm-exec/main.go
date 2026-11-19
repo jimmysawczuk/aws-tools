@@ -17,17 +17,18 @@ import (
 func main() {
 	var path string
 
-	flag.StringVar(&path, "path", "", "path prefix for ssm")
+	flag.StringVar(&path, "path", os.Getenv("SSM_PATH"), "path prefix for ssm; falls back to $SSM_PATH")
 	flag.Usage = func() {
 		log.SetFlags(0)
 		log.Printf("usage: %s -path /ssm/prefix program [args...]", os.Args[0])
+		log.Printf("       SSM_PATH=/ssm/prefix %s program [args...]", os.Args[0])
 		flag.PrintDefaults()
 	}
 
 	flag.Parse()
 
 	if path == "" || !strings.HasPrefix(path, "/") {
-		log.Fatal("path must be present and start with /")
+		log.Fatal("path must be set via -path or SSM_PATH and start with /")
 	}
 
 	args := flag.Args()

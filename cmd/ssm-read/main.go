@@ -18,7 +18,7 @@ func main() {
 	var path string
 	var out string
 
-	flag.StringVar(&path, "path", "", "path prefix for ssm")
+	flag.StringVar(&path, "path", os.Getenv("SSM_PATH"), "path prefix for ssm; falls back to $SSM_PATH")
 	flag.StringVar(&out, "out", "", "output (leave blank for stdout)")
 
 	flag.Parse()
@@ -33,7 +33,7 @@ func main() {
 	ssmClient := ssmsvc.NewFromConfig(cfg)
 
 	if path == "" || !strings.HasPrefix(path, "/") {
-		log.Fatal("path must be present and start with /")
+		log.Fatal("path must be set via -path or SSM_PATH and start with /")
 	}
 
 	params, err := ssm.GetParametersFromPath(context.Background(), ssmClient, path)
