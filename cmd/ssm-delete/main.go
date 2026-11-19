@@ -16,7 +16,7 @@ func main() {
 	var dryRun bool
 
 	flag.StringVar(&path, "path", "", "path prefix for ssm")
-	flag.BoolVar(&dryRun, "dry-run", true, "set to true to actually delete params")
+	flag.BoolVar(&dryRun, "dry-run", true, "set to false to actually delete params")
 
 	flag.Parse()
 
