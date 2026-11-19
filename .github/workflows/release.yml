@@ -2,11 +2,14 @@ name: Release new version
 on:
   release:
     types: [created]
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        go: ["1.25", "1.26", "1.27"]
         arch:
           - goos: darwin
             goarch: amd64
@@ -29,13 +32,13 @@ jobs:
           - ssm-read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: "0"
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
-          go-version: "^1.25"
+          go-version: ${{ matrix.go }}
       - name: Get tag
         id: tag
         uses: jimmysawczuk/actions/github/get-tag-from-ref@main
@@ -49,13 +52,8 @@ jobs:
           echo "-X main.version=${{ steps.tag.outputs.tag }} -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)" > /tmp/buildtags
           cat /tmp/buildtags
 
-          CGO_ENABLED=0 go build -a -o "${{ matrix.cmd }}-${{ steps.tag.outputs.tag }}-${{ matrix.arch.arch }}" -ldflags "-s -w $(cat /tmp/buildtags)" -mod=vendor ./cmd/${{ matrix.cmd }}
+          CGO_ENABLED=0 go build -a -o "${{ matrix.cmd }}-${{ steps.tag.outputs.tag }}-${{ matrix.arch.arch }}-go${{ matrix.go }}" -ldflags "-s -w $(cat /tmp/buildtags)" -mod=vendor ./cmd/${{ matrix.cmd }}
       - name: Upload build
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./${{ matrix.cmd }}-${{ steps.tag.outputs.tag }}-${{ matrix.arch.arch}}
-          asset_name: ${{ matrix.cmd }}-${{ steps.tag.outputs.tag }}-${{ matrix.arch.arch}}
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ matrix.cmd }}-${{ steps.tag.outputs.tag }}-${{ matrix.arch.arch }}-go${{ matrix.go }}" --repo "${{ github.repository }}"
