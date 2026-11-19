@@ -6,7 +6,7 @@ All tools use the standard AWS SDK credential chain (`AWS_PROFILE`, `AWS_REGION`
 
 ## Install
 
-Prebuilt binaries for `darwin-amd64`, `linux-amd64`, and `linux-arm64` are attached to each [release](https://github.com/jimmysawczuk/aws-tools/releases), built with each of Go 1.25, 1.26, and 1.27 and named `<tool>-<tag>-<os>-<arch>-go<version>`.
+Prebuilt binaries for `darwin-amd64`, `linux-amd64`, and `linux-arm64` are attached to each [release](https://github.com/jimmysawczuk/aws-tools/releases), built with the latest Go and named `<tool>-<tag>-<os>-<arch>`.
 
 Or build from source (Go 1.25+):
 

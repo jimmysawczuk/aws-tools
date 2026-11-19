@@ -9,46 +9,39 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ["1.25", "1.26", "1.27"]
+        platform:
+          - goos: darwin
+            goarch: amd64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+        cmd:
+          - cloudfront-invalidate
+          - ecs-build-appspec
+          - ecs-find-template-taskdef
+          - ecs-prune-taskdefs
+          - retrieve-secret
+          - ssm-delete
+          - ssm-exec
+          - ssm-load
+          - ssm-read
     env:
-      CMDS: >-
-        cloudfront-invalidate
-        ecs-build-appspec
-        ecs-find-template-taskdef
-        ecs-prune-taskdefs
-        retrieve-secret
-        ssm-delete
-        ssm-exec
-        ssm-load
-        ssm-read
-      PLATFORMS: darwin/amd64 linux/amd64 linux/arm64
+      OUT: ${{ matrix.cmd }}-${{ github.ref_name }}-${{ matrix.platform.goos }}-${{ matrix.platform.goarch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          fetch-depth: "0"
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: ${{ matrix.go }}
+          go-version: "1.27"
       - name: Build
         env:
-          TAG: ${{ github.ref_name }}
-          GO_VERSION: ${{ matrix.go }}
-        run: |
-          buildtags="-X main.version=$TAG -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)"
-          echo "$buildtags"
-          mkdir -p dist
-          for platform in $PLATFORMS; do
-            goos="${platform%/*}"
-            goarch="${platform#*/}"
-            for cmd in $CMDS; do
-              out="dist/$cmd-$TAG-$goos-$goarch-go$GO_VERSION"
-              echo "building $out"
-              CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -o "$out" -ldflags "-s -w $buildtags" -mod=vendor "./cmd/$cmd"
-            done
-          done
-      - name: Upload builds
+          GOOS: ${{ matrix.platform.goos }}
+          GOARCH: ${{ matrix.platform.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -o "$OUT" -ldflags "-s -w -X main.version=$GITHUB_REF_NAME -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)" -mod=vendor "./cmd/${{ matrix.cmd }}"
+      - name: Upload build
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --repo "${{ github.repository }}"
+        run: gh release upload "$GITHUB_REF_NAME" "$OUT" --repo "$GITHUB_REPOSITORY"
