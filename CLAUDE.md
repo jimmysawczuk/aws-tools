@@ -20,7 +20,7 @@ There are no tests that hit AWS; don't add any. Tests, if added, must run offlin
 
 ## Conventions
 
-- Go 1.25 minimum (`go.mod`); CI tests and release builds both use the last three Go majors (1.25, 1.26, 1.27); keep the matrices in `test.yml` and `release.yml` in sync.
+- Go 1.25 minimum (`go.mod`); CI tests on the last three Go majors (1.25, 1.26, 1.27); release builds use only the newest. When bumping, update `test.yml` and the `go-version` in `release.yml` together.
 - Config via stdlib `flag` or `envconfig` env vars; AWS config via `config.LoadDefaultConfig`.
 - Errors wrapped with `fmt.Errorf("svc: op: %w", err)`; fatal via `log.Fatal*` in `main`.
 - Destructive tools only preview by default and act when `-apply` is passed. Don't add `-dry-run` flags.

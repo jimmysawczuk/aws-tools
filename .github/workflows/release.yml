@@ -9,7 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: ["1.25", "1.26", "1.27"]
+        platform:
+          - goos: darwin
+            goarch: amd64
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
     env:
       CMDS: >-
         cloudfront-invalidate
@@ -21,34 +27,27 @@ jobs:
         ssm-exec
         ssm-load
         ssm-read
-      PLATFORMS: darwin/amd64 linux/amd64 linux/arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          fetch-depth: "0"
       - name: Setup Go
         uses: actions/setup-go@v7
         with:
-          go-version: ${{ matrix.go }}
+          go-version: "1.27"
       - name: Build
         env:
-          TAG: ${{ github.ref_name }}
-          GO_VERSION: ${{ matrix.go }}
+          GOOS: ${{ matrix.platform.goos }}
+          GOARCH: ${{ matrix.platform.goarch }}
+          CGO_ENABLED: "0"
         run: |
-          buildtags="-X main.version=$TAG -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)"
-          echo "$buildtags"
+          ldflags="-s -w -X main.version=$GITHUB_REF_NAME -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)"
           mkdir -p dist
-          for platform in $PLATFORMS; do
-            goos="${platform%/*}"
-            goarch="${platform#*/}"
-            for cmd in $CMDS; do
-              out="dist/$cmd-$TAG-$goos-$goarch-go$GO_VERSION"
-              echo "building $out"
-              CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -o "$out" -ldflags "-s -w $buildtags" -mod=vendor "./cmd/$cmd"
-            done
+          for cmd in $CMDS; do
+            out="dist/$cmd-$GITHUB_REF_NAME-$GOOS-$GOARCH"
+            echo "building $out"
+            go build -o "$out" -ldflags "$ldflags" -mod=vendor "./cmd/$cmd"
           done
       - name: Upload builds
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --repo "${{ github.repository }}"
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY"
