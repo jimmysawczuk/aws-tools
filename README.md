@@ -104,7 +104,10 @@ Loads parameters under a path into the environment, then `exec`s the given progr
 
 ```sh
 ssm-exec -path /myapp/prod ./server --port 8080
+SSM_PATH=/myapp/prod ssm-exec ./server --port 8080
 ```
+
+`-path` takes precedence over `SSM_PATH`.
 
 ## Development
 
