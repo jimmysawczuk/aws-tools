@@ -78,7 +78,10 @@ Reads all parameters under a path (decrypted) and writes them as `NAME="value"` 
 ```sh
 ssm-read -path /myapp/prod > .env
 ssm-read -path /myapp/prod -out .env
+SSM_PATH=/myapp/prod ssm-read -out .env
 ```
+
+`-path` takes precedence over `SSM_PATH`.
 
 ### ssm-load
 
