@@ -101,3 +101,22 @@ func DeleteParameters(ctx context.Context, ssmClient *ssm.Client, paths []string
 
 	return nil
 }
+
+// LoadIntoEnvNoOverwrite sets each param as an env var unless that var is
+// already defined, and returns how many were set.
+func LoadIntoEnvNoOverwrite(in []Param) (int, error) {
+	var n int
+	for _, v := range in {
+		if _, ok := os.LookupEnv(v.Name); ok {
+			continue
+		}
+
+		if err := os.Setenv(v.Name, v.Value); err != nil {
+			return n, fmt.Errorf("os: setenv: %w", err)
+		}
+
+		n++
+	}
+
+	return n, nil
+}

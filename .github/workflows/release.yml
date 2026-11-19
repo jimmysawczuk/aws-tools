@@ -4,14 +4,19 @@ on:
     types: [created]
 jobs:
   build:
-    runs-on: ${{ matrix.arch.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         arch:
-          - os: macos-latest
+          - goos: darwin
+            goarch: amd64
             arch: darwin-amd64
-          - os: ubuntu-latest
+          - goos: linux
+            goarch: amd64
             arch: linux-amd64
+          - goos: linux
+            goarch: arm64
+            arch: linux-arm64
         cmd:
           - cloudfront-invalidate
           - ecs-build-appspec
@@ -19,6 +24,7 @@ jobs:
           - ecs-prune-taskdefs
           - retrieve-secret
           - ssm-delete
+          - ssm-exec
           - ssm-load
           - ssm-read
     steps:
@@ -36,6 +42,9 @@ jobs:
         with:
           ref: ${{ github.ref }}
       - name: Build
+        env:
+          GOOS: ${{ matrix.arch.goos }}
+          GOARCH: ${{ matrix.arch.goarch }}
         run: |
           echo "-X main.version=${{ steps.tag.outputs.tag }} -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)" > /tmp/buildtags
           cat /tmp/buildtags
