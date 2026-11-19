@@ -16,18 +16,17 @@ jobs:
             goarch: amd64
           - goos: linux
             goarch: arm64
-        cmd:
-          - cloudfront-invalidate
-          - ecs-build-appspec
-          - ecs-find-template-taskdef
-          - ecs-prune-taskdefs
-          - retrieve-secret
-          - ssm-delete
-          - ssm-exec
-          - ssm-load
-          - ssm-read
     env:
-      OUT: ${{ matrix.cmd }}-${{ github.ref_name }}-${{ matrix.platform.goos }}-${{ matrix.platform.goarch }}
+      CMDS: >-
+        cloudfront-invalidate
+        ecs-build-appspec
+        ecs-find-template-taskdef
+        ecs-prune-taskdefs
+        retrieve-secret
+        ssm-delete
+        ssm-exec
+        ssm-load
+        ssm-read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -40,8 +39,15 @@ jobs:
           GOOS: ${{ matrix.platform.goos }}
           GOARCH: ${{ matrix.platform.goarch }}
           CGO_ENABLED: "0"
-        run: go build -o "$OUT" -ldflags "-s -w -X main.version=$GITHUB_REF_NAME -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)" -mod=vendor "./cmd/${{ matrix.cmd }}"
-      - name: Upload build
+        run: |
+          ldflags="-s -w -X main.version=$GITHUB_REF_NAME -X main.revision=$GITHUB_SHA -X main.date=$(date --iso-8601=seconds)"
+          mkdir -p dist
+          for cmd in $CMDS; do
+            out="dist/$cmd-$GITHUB_REF_NAME-$GOOS-$GOARCH"
+            echo "building $out"
+            go build -o "$out" -ldflags "$ldflags" -mod=vendor "./cmd/$cmd"
+          done
+      - name: Upload builds
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" "$OUT" --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY"
