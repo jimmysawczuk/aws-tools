@@ -29,7 +29,7 @@ There are no tests that hit AWS; don't add any. Tests, if added, must run offlin
 ## Adding a tool
 
 1. Create `cmd/<tool>/main.go`.
-2. Add `<tool>` to the `cmd` matrix in `.github/workflows/release.yml`.
+2. Add `<tool>` to `CMDS` in `.github/workflows/release.yml`.
 3. Document it in README.md.
 
 Release binaries are built with `-ldflags "-X main.version=... -X main.revision=... -X main.date=..."`; declare those vars in `main` if the tool reports its version.
